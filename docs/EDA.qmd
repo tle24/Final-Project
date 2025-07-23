@@ -1,0 +1,19 @@
+---
+title: "EDA"
+format: html
+editor: visual
+---
+
+## Introduction
+
+For this project, the Diabetes Health Indicators Dataset will be explored to see there is a relationship between some variables and those with diabetes or prediabetes. This EDA will look at three variables in particular: high blood pressure, high cholesterol, and if there has been any physical activity in the past 30 days.
+
+The [ADA states that about two out of three people with diabetes report having high blood pressure](https://diabetes.org/about-diabetes/complications/high-blood-pressure). This would be an important variable to look at when looking at indicators to predict if someone has diabetes or not. Similarly, the [ADA also states that people with diabetes are more prone to having high cholesterol](https://www.heart.org/en/health-topics/diabetes/diabetes-complications-and-risks/cholesterol-abnormalities--diabetes). This could be because diabetes tend to lower "good" cholesterol and raise "bad" cholesterol. By looking at cholesterol, this can be an indicator of diabetes and would be a good variable to explore. Looking at the physical activity variable is important in predicting whether a person has diabetes or not because [studies have shown that exercise can directly reduce blood glucose levels](https://www.aarp.org/health/healthy-living/best-exercises-for-diabetes-control/). This means that physical activity is a good way of preventing or controlling diabetes.
+
+In this EDA, we will look at how these three variables relate to the response variable showing a person having diabetes are not. We will explore how the variables individually relate to the response variable as well as how they interact to give the response variable.
+
+## Data
+
+## Summarizations
+
+[Click here for the Modeling Page](Modeling.html)
