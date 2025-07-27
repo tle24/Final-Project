@@ -4,23 +4,150 @@ format: html
 editor: visual
 ---
 
-## Quarto
+## Introduction
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
 
-## Running Code
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Splitting Data
 
-```{r}
-1 + 1
+```{r, warning=FALSE}
+#library some packages
+library(tidymodels)
+library(tidyverse)
+library(caret)
+library(yardstick)
+library(glmnet)
+library(rpart)
+library(parsnip)
+library(dials)
+library(ranger)
 ```
 
-You can add options to executable code like this
 
 ```{r}
-#| echo: false
-2 * 2
+#split data into training and test set
+set.seed(145)
+split <- initial_split(diabetes_data, prop = 0.7)
+diabetes_train <- training(split)
+diabetes_test <- testing(split)
+
+#create 10 cv folds on training data
+diabetes_cv <- vfold_cv(diabetes_train, 10)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+
+## Logistic Regression Models
+
+Logistic regression models are a type of predictive modeling that can be used for binary classification variables, meaning that there is only two options for the response variable. Logistic regression deals with probabilities of data, so the model will always be between 0 and 1. We will be using logistic regression models to fit the diabetes data because our response variable of Diabetes_binary is binary and we will be able to use the model to predict whether a person has diabetes or not. We will fit three models to compare and determine the best logistic regression model for predicting diabetes. 
+
+
+### Fit 3 Models
+
+```{r}
+#model 1 - Age, Sex, HighBP, HighChol, PhysActivity
+lr1_rec <- recipe(Diabetes_binary ~ Age + Sex + HighBP + HighChol + PhysActivity, data = diabetes_train) |>
+  step_dummy(Age, Sex, HighBP, HighChol, PhysActivity)
+lr1_spec <- logistic_reg() |>
+  set_engine("glm")
+lr1_wkf <- workflow() |>
+  add_recipe(lr1_rec) |>
+  add_model(lr1_spec)
+
+#fit lr1 model to cv folds
+lr1_fit <- lr1_wkf |>
+  fit_resamples(diabetes_cv, metrics = metric_set(mn_log_loss))
+```
+
+
+```{r}
+#model 2 - Age, Sex, HighBP, HighChol, BMI, Stroke, HeartDiseaseorAttack
+lr2_rec <- recipe(Diabetes_binary ~ Age + Sex + HighBP + HighChol + BMI + Stroke + HeartDiseaseorAttack, data = diabetes_train) |>
+  step_dummy(Age, Sex, HighBP, HighChol, Stroke, HeartDiseaseorAttack)
+lr2_spec <- logistic_reg() |>
+  set_engine("glm")
+lr2_wkf <- workflow() |>
+  add_recipe(lr2_rec) |>
+  add_model(lr2_spec)
+
+#fit lr2 model to cv folds
+lr2_fit <- lr2_wkf |>
+  fit_resamples(diabetes_cv, metrics = metric_set(mn_log_loss))
+```
+
+
+```{r}
+#model 3 - Age, Sex, Smoker, Fruits, Veggies, HvyAlcoholConsump
+lr3_rec <- recipe(Diabetes_binary ~ Age + Sex + Smoker + Fruits + Veggies + HvyAlcoholConsump, data = diabetes_train) |>
+  step_dummy(Age, Sex, Smoker, Fruits, Veggies, HvyAlcoholConsump)
+lr3_spec <- logistic_reg() |>
+  set_engine("glm")
+lr3_wkf <- workflow() |>
+  add_recipe(lr3_rec) |>
+  add_model(lr3_spec)
+
+#fit lr3 model to cv folds
+lr3_fit <- lr3_wkf |>
+  fit_resamples(diabetes_cv, metrics = metric_set(mn_log_loss))
+```
+
+
+### Determine Best Model
+
+```{r}
+rbind(lr1_fit |> collect_metrics(),
+      lr2_fit |> collect_metrics(),
+      lr3_fit |> collect_metrics()) |>
+  mutate(Model = c("LR Model 1", "LR Model 2", "LR Model 3"))
+```
+
+From the three logistic regression models, the best model is the second model with the lowest log loss metric. 
+
+
+## Classification Tree
+
+A classification tree is a type of predictive modeling that can be easy to interpret and split into decisions that is made based on predictors. As a decision tree is made, it is split based on the next best predictor to eventually arrive at a final prediction. A classification tree can be used on the diabetes data as there are multiple predictors that a decision tree can use and will be able to come to a prediction based on these predictors. We will create classification trees with different values of cost complexity to determine the best model to fit the data. 
+
+
+```{r}
+tree_rec <- recipe(Diabetes_binary ~ ., data = diabetes_train) |>
+  step_dummy(all_factor_predictors()) |>
+  step_normalize(all_numeric())
+tree_spec <- decision_tree(cost_complexity = tune()) |>
+  set_engine("rpart") |>
+  set_mode("classification")
+tree_wkf <- workflow() |>
+  add_recipe(tree_rec) |>
+  add_model(tree_spec)
+
+tree_fit <- tree_wkf |>
+  tune_grid(resamples = diabetes_cv,
+            grid = grid_regular(cost_complexity(), levels = 10),
+            metrics = metric_set(mn_log_loss))
+```
+
+
+## Random Forest
+
+A random forest model is similar to the classification tree as there is a decision tree being made. However, in random forest, many decision trees are made and the predictions are combined to come up with the best prediction of the data. Each tree of the random forest model picks a few features at random to split the decision tree, helping to avoid over fitting the data. We will use a random forest model on the diabetes data to come up with the best predictions. 
+
+
+```{r}
+
+rf_rec <- recipe(Diabetes_binary ~ Age + Sex + HighBP + HighChol + PhysActivity, data = diabetes_train) |>
+  step_dummy(Age, Sex, HighBP, HighChol, PhysActivity)
+rf_spec <- rand_forest(mtry = tune()) |>
+  set_engine("ranger") |>
+  set_mode("classification")
+rf_wkf <- workflow() |>
+  add_recipe(rf_rec) |>
+  add_model(rf_spec)
+
+rf_fit <- rf_wkf |>
+  tune_grid(resamples = diabetes_cv,
+            grid = grid_regular(mtry(range = c(1, ncol(diabetes_train) -1)), levels = 10),
+            metrics = metric_set(mn_log_loss))
+```
+
+
+
+## Final Model Selection
