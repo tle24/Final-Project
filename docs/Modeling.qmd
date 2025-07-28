@@ -10,7 +10,7 @@ editor: visual
 
 ## Splitting Data
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 #library some packages
 library(tidymodels)
 library(tidyverse)
@@ -109,9 +109,9 @@ A classification tree is a type of predictive modeling that can be easy to inter
 
 
 ```{r}
-tree_rec <- recipe(Diabetes_binary ~ ., data = diabetes_train) |>
-  step_dummy(all_factor_predictors()) |>
-  step_normalize(all_numeric())
+#create model workflow
+tree_rec <- recipe(Diabetes_binary ~ HighBP + HighChol + Stroke + HeartDiseaseorAttack, data = diabetes_train) |>
+  step_dummy(HighBP, HighChol, Stroke, HeartDiseaseorAttack)
 tree_spec <- decision_tree(cost_complexity = tune()) |>
   set_engine("rpart") |>
   set_mode("classification")
@@ -119,10 +119,19 @@ tree_wkf <- workflow() |>
   add_recipe(tree_rec) |>
   add_model(tree_spec)
 
+#tune with various cost complexity
 tree_fit <- tree_wkf |>
   tune_grid(resamples = diabetes_cv,
             grid = grid_regular(cost_complexity(), levels = 10),
             metrics = metric_set(mn_log_loss))
+```
+
+
+```{r}
+#choose best classification tree model
+tree_best_params <- select_best(tree_fit, metric = "mn_log_loss")
+tree_final_wkf <- tree_wkf |>
+  finalize_workflow(tree_best_params)
 ```
 
 
@@ -132,9 +141,9 @@ A random forest model is similar to the classification tree as there is a decisi
 
 
 ```{r}
-
-rf_rec <- recipe(Diabetes_binary ~ Age + Sex + HighBP + HighChol + PhysActivity, data = diabetes_train) |>
-  step_dummy(Age, Sex, HighBP, HighChol, PhysActivity)
+#create model workflow
+rf_rec <- recipe(Diabetes_binary ~ HighBP + HighChol + PhysActivity, data = diabetes_train) |>
+  step_dummy(HighBP, HighChol, PhysActivity)
 rf_spec <- rand_forest(mtry = tune()) |>
   set_engine("ranger") |>
   set_mode("classification")
@@ -142,6 +151,7 @@ rf_wkf <- workflow() |>
   add_recipe(rf_rec) |>
   add_model(rf_spec)
 
+#tune with mtry
 rf_fit <- rf_wkf |>
   tune_grid(resamples = diabetes_cv,
             grid = grid_regular(mtry(range = c(1, ncol(diabetes_train) -1)), levels = 10),
@@ -149,5 +159,34 @@ rf_fit <- rf_wkf |>
 ```
 
 
+```{r}
+#choose best random forest model
+rf_best_params <- select_best(rf_fit, metric = "mn_log_loss")
+rf_final_wkf <- rf_wkf |>
+  finalize_workflow(rf_best_params)
+```
+
 
 ## Final Model Selection
+
+With the best logistic regression model, the best classification model, and the best random forest model determined, we will compare all the models on the test set to decide which model will be the best overall. 
+
+
+```{r}
+
+lr_final_fit <- lr2_wkf |>
+  last_fit(split, metrics = metric_set(mn_log_loss))
+tree_final_fit <- tree_final_wkf |>
+  last_fit(split, metrics = metric_set(mn_log_loss))
+rf_final_fit <- rf_final_wkf |>
+  last_fit(split, metrics = metric_set(mn_log_loss))
+```
+
+```{r}
+rbind(lr_final_fit |> collect_metrics(),
+      tree_final_fit |> collect_metrics(),
+      rf_final_fit |> collect_metrics()) |>
+  mutate(Model = c("LR Model", "Tree Model", "Random Forest Model"))
+```
+
+When testing the best of each type of model using the test data and comparing the log loss, it looks like the best model to predict whether a person has diabetes or not is the logistic regression model. 
