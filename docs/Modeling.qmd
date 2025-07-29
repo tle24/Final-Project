@@ -155,7 +155,7 @@ tree_wkf <- workflow() |>
 #tune with various cost complexity
 tree_fit <- tree_wkf |>
   tune_grid(resamples = diabetes_cv,
-            grid = grid_regular(cost_complexity(), levels = 10),
+            grid = grid_regular(cost_complexity(), levels = 5),
             metrics = metric_set(mn_log_loss))
 ```
 
@@ -174,6 +174,8 @@ A random forest model is similar to the classification tree as there is a decisi
 
 
 ```{r}
+
+
 #create model workflow
 rf_rec <- recipe(Diabetes_binary ~ HighBP + HighChol + PhysActivity, data = diabetes_train) |>
   step_dummy(HighBP, HighChol, PhysActivity)
@@ -187,7 +189,7 @@ rf_wkf <- workflow() |>
 #tune with mtry
 rf_fit <- rf_wkf |>
   tune_grid(resamples = diabetes_cv,
-            grid = grid_regular(mtry(range = c(1, ncol(diabetes_train) -1)), levels = 10),
+            grid = 5,
             metrics = metric_set(mn_log_loss))
 ```
 
