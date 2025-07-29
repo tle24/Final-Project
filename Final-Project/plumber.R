@@ -39,33 +39,28 @@ diabetes_data <- read_csv("diabetes_binary_health_indicators_BRFSS2015.csv", col
 #* @apiTitle Diabetes Prediction Model API
 #* @apiDescription This API will have a model to predict for diabetes based on some variables and a link to the github pages.
 
+#* Logistic regression model for predicting diabetes
+#* @param HighBP 0 for no high BP, 1 for high BP
+#* @param HighChol 0 for no high cholesterol, 1 for high cholesterol
+#* @param BMI value of BMI
+#* @param Stroke 0 for no stroke, 1 for stroke
+#* @param HeartDiseaseorAttack 0 for no heart disease or heart attack, 1 for heart disease or heart attack
+#* @get /pred
+function(HighBP = 0, HighChol = 0, BMI = 28.4, Stroke = 0, HeartDiseaseorAttack = 0) {
+  -3.02367993 + 0.06461834*as.numeric(BMI) + -1.15403139*as.numeric(HighBP) + -0.74280903*as.numeric(HighChol) + 0.51060086*as.numeric(Stroke) + 0.71177963*as.numeric(HeartDiseaseorAttack)
+}
+
+#Example function calls
+# http://127.0.0.1:37194/pred?HighBP=1&HighChol=1&BMI=28.4&Stroke=1&HeartDiseaseorAttack=1
+# http://127.0.0.1:37194/pred?HighBP=1&HighChol=0&BMI=33&Stroke=1&HeartDiseaseorAttack=0
+# http://127.0.0.1:37194/pred?HighBP=0&HighChol=1&BMI=20.6&Stroke=0&HeartDiseaseorAttack=1
+
+
 #* Echo back the input
-#* @param msg The message to echo
 #* @get /info
 function() {
-    msg = paste0("Tamdan Le", \n, "https://tle24.github.io/Final-Project/")
+  "Name: Tamdan Le, URL: https://tle24.github.io/Final-Project/"
 }
 
-#* Plot a histogram
-#* @serializer png
-#* @get /plot
-function() {
-    rand <- rnorm(100)
-    hist(rand)
-}
 
-#* Return the sum of two numbers
-#* @param a The first number to add
-#* @param b The second number to add
-#* @post /sum
-function(a, b) {
-    as.numeric(a) + as.numeric(b)
-}
 
-# Programmatically alter your API
-#* @plumber
-function(pr) {
-    pr %>%
-        # Overwrite the default serializer to return unboxed JSON
-        pr_set_serializer(serializer_unboxed_json())
-}

@@ -93,9 +93,9 @@ lr1_fit <- lr1_wkf |>
 
 
 ```{r}
-#model 2 - Age, Sex, HighBP, HighChol, BMI, Stroke, HeartDiseaseorAttack
-lr2_rec <- recipe(Diabetes_binary ~ Age + Sex + HighBP + HighChol + BMI + Stroke + HeartDiseaseorAttack, data = diabetes_train) |>
-  step_dummy(Age, Sex, HighBP, HighChol, Stroke, HeartDiseaseorAttack)
+#model 2 - HighBP, HighChol, BMI, Stroke, HeartDiseaseorAttack
+lr2_rec <- recipe(Diabetes_binary ~ HighBP + HighChol + BMI + Stroke + HeartDiseaseorAttack, data = diabetes_train) |>
+  step_dummy(HighBP, HighChol, Stroke, HeartDiseaseorAttack)
 lr2_spec <- logistic_reg() |>
   set_engine("glm")
 lr2_wkf <- workflow() |>
@@ -109,9 +109,9 @@ lr2_fit <- lr2_wkf |>
 
 
 ```{r}
-#model 3 - Age, Sex, Smoker, Fruits, Veggies, HvyAlcoholConsump
-lr3_rec <- recipe(Diabetes_binary ~ Age + Sex + Smoker + Fruits + Veggies + HvyAlcoholConsump, data = diabetes_train) |>
-  step_dummy(Age, Sex, Smoker, Fruits, Veggies, HvyAlcoholConsump)
+#model 3 - Smoker, Fruits, Veggies, HvyAlcoholConsump
+lr3_rec <- recipe(Diabetes_binary ~ Smoker + Fruits + Veggies + HvyAlcoholConsump, data = diabetes_train) |>
+  step_dummy(Smoker, Fruits, Veggies, HvyAlcoholConsump)
 lr3_spec <- logistic_reg() |>
   set_engine("glm")
 lr3_wkf <- workflow() |>
@@ -225,3 +225,11 @@ rbind(lr_final_fit |> collect_metrics(),
 ```
 
 When testing the best of each type of model using the test data and comparing the log loss, it looks like the best model to predict whether a person has diabetes or not is the logistic regression model. 
+
+```{r}
+best_model <- lr2_wkf |>
+  fit(diabetes_data)
+tidy(best_model)
+```
+
+The logistic regression model would be Diabetes_binary ~ -3.02367993 + 0.06461834*BMI + -1.15403139*HighBP + -0.74280903*HighChol + 0.51060086*Stroke + 0.71177963*HeartDiseaseorAttack. 
