@@ -6,12 +6,13 @@ editor: visual
 
 ## Introduction
 
+For this modeling section of the project, we will fit the diabetes data to different models to see which would be the best at predicting whether a person has diabetes or not. For the data we will fit three logistic regression models with different variables, a classification tree, and a random forest model. The log loss metric will be used to show how well the models are doing at predictions. This metric compares the prediction to the true value to determine a value for the model. 
+
 ```{r, warning=FALSE, message=FALSE}
 #library some packages
 library(readr)
 library(dplyr)
 ```
-
 
 ```{r}
 #read in data
@@ -40,8 +41,9 @@ diabetes_data <- read_csv("diabetes_binary_health_indicators_BRFSS2015.csv", col
 diabetes_data
 ```
 
-
 ## Splitting Data
+
+First, we need to split the data so that we have a training set and a testing set. The testing data will be set aside to test how well the model does at the end. With the training set, we can also separate them into cv folds to use them in cross validation when fitting a model. 
 
 ```{r, warning=FALSE, message=FALSE}
 #library some packages
@@ -56,7 +58,6 @@ library(dials)
 library(ranger)
 ```
 
-
 ```{r}
 #split data into training and test set
 set.seed(145)
@@ -68,11 +69,9 @@ diabetes_test <- testing(split)
 diabetes_cv <- vfold_cv(diabetes_train, 10)
 ```
 
-
 ## Logistic Regression Models
 
-Logistic regression models are a type of predictive modeling that can be used for binary classification variables, meaning that there is only two options for the response variable. Logistic regression deals with probabilities of data, so the model will always be between 0 and 1. We will be using logistic regression models to fit the diabetes data because our response variable of Diabetes_binary is binary and we will be able to use the model to predict whether a person has diabetes or not. We will fit three models to compare and determine the best logistic regression model for predicting diabetes. 
-
+Logistic regression models are a type of predictive modeling that can be used for binary classification variables, meaning that there is only two options for the response variable. Logistic regression deals with probabilities of data, so the model will always be between 0 and 1. We will be using logistic regression models to fit the diabetes data because our response variable of Diabetes_binary is binary and we will be able to use the model to predict whether a person has diabetes or not. We will fit three models to compare and determine the best logistic regression model for predicting diabetes.
 
 ### Fit 3 Models
 
@@ -91,7 +90,6 @@ lr1_fit <- lr1_wkf |>
   fit_resamples(diabetes_cv, metrics = metric_set(mn_log_loss))
 ```
 
-
 ```{r}
 #model 2 - HighBP, HighChol, BMI, Stroke, HeartDiseaseorAttack
 lr2_rec <- recipe(Diabetes_binary ~ HighBP + HighChol + BMI + Stroke + HeartDiseaseorAttack, data = diabetes_train) |>
@@ -106,7 +104,6 @@ lr2_wkf <- workflow() |>
 lr2_fit <- lr2_wkf |>
   fit_resamples(diabetes_cv, metrics = metric_set(mn_log_loss))
 ```
-
 
 ```{r}
 #model 3 - Smoker, Fruits, Veggies, HvyAlcoholConsump
@@ -123,23 +120,21 @@ lr3_fit <- lr3_wkf |>
   fit_resamples(diabetes_cv, metrics = metric_set(mn_log_loss))
 ```
 
-
 ### Determine Best Model
 
 ```{r}
+#compare log loss metric of models
 rbind(lr1_fit |> collect_metrics(),
       lr2_fit |> collect_metrics(),
       lr3_fit |> collect_metrics()) |>
   mutate(Model = c("LR Model 1", "LR Model 2", "LR Model 3"))
 ```
 
-From the three logistic regression models, the best model is the second model with the lowest log loss metric. 
-
+From the three logistic regression models, the best model is the second model with the lowest log loss metric.
 
 ## Classification Tree
 
-A classification tree is a type of predictive modeling that can be easy to interpret and split into decisions that is made based on predictors. As a decision tree is made, it is split based on the next best predictor to eventually arrive at a final prediction. A classification tree can be used on the diabetes data as there are multiple predictors that a decision tree can use and will be able to come to a prediction based on these predictors. We will create classification trees with different values of cost complexity to determine the best model to fit the data. 
-
+A classification tree is a type of predictive modeling that can be easy to interpret and split into decisions that is made based on predictors. As a decision tree is made, it is split based on the next best predictor to eventually arrive at a final prediction. A classification tree can be used on the diabetes data as there are multiple predictors that a decision tree can use and will be able to come to a prediction based on these predictors. We will create classification trees with different values of cost complexity to determine the best model to fit the data.
 
 ```{r}
 #create model workflow
@@ -159,7 +154,6 @@ tree_fit <- tree_wkf |>
             metrics = metric_set(mn_log_loss))
 ```
 
-
 ```{r}
 #choose best classification tree model
 tree_best_params <- select_best(tree_fit, metric = "mn_log_loss")
@@ -167,15 +161,11 @@ tree_final_wkf <- tree_wkf |>
   finalize_workflow(tree_best_params)
 ```
 
-
 ## Random Forest
 
-A random forest model is similar to the classification tree as there is a decision tree being made. However, in random forest, many decision trees are made and the predictions are combined to come up with the best prediction of the data. Each tree of the random forest model picks a few features at random to split the decision tree, helping to avoid over fitting the data. We will use a random forest model on the diabetes data to come up with the best predictions. 
-
+A random forest model is similar to the classification tree as there is a decision tree being made. However, in random forest, many decision trees are made and the predictions are combined to come up with the best prediction of the data. Each tree of the random forest model picks a few features at random to split the decision tree, helping to avoid over fitting the data. We will use a random forest model on the diabetes data to come up with the best predictions.
 
 ```{r}
-
-
 #create model workflow
 rf_rec <- recipe(Diabetes_binary ~ HighBP + HighChol + PhysActivity, data = diabetes_train) |>
   step_dummy(HighBP, HighChol, PhysActivity)
@@ -193,7 +183,6 @@ rf_fit <- rf_wkf |>
             metrics = metric_set(mn_log_loss))
 ```
 
-
 ```{r}
 #choose best random forest model
 rf_best_params <- select_best(rf_fit, metric = "mn_log_loss")
@@ -201,35 +190,33 @@ rf_final_wkf <- rf_wkf |>
   finalize_workflow(rf_best_params)
 ```
 
-
 ## Final Model Selection
 
-With the best logistic regression model, the best classification model, and the best random forest model determined, we will compare all the models on the test set to decide which model will be the best overall. 
-
+With the best logistic regression model, the best classification model, and the best random forest model determined, we will compare all the models on the test set to decide which model will be the best overall.
 
 ```{r}
-
+#fit each model with the training and test data
 lr_final_fit <- lr2_wkf |>
   last_fit(split, metrics = metric_set(mn_log_loss))
 tree_final_fit <- tree_final_wkf |>
   last_fit(split, metrics = metric_set(mn_log_loss))
 rf_final_fit <- rf_final_wkf |>
   last_fit(split, metrics = metric_set(mn_log_loss))
-```
 
-```{r}
+#compare log loss of the three models
 rbind(lr_final_fit |> collect_metrics(),
       tree_final_fit |> collect_metrics(),
       rf_final_fit |> collect_metrics()) |>
   mutate(Model = c("LR Model", "Tree Model", "Random Forest Model"))
 ```
 
-When testing the best of each type of model using the test data and comparing the log loss, it looks like the best model to predict whether a person has diabetes or not is the logistic regression model. 
+When testing the best of each type of model using the test data and comparing the log loss, it looks like the best model to predict whether a person has diabetes or not is the logistic regression model.
 
 ```{r}
+#look at coefficients of best model
 best_model <- lr2_wkf |>
   fit(diabetes_data)
 tidy(best_model)
 ```
 
-The logistic regression model would be Diabetes_binary ~ -3.02367993 + 0.06461834*BMI + -1.15403139*HighBP + -0.74280903*HighChol + 0.51060086*Stroke + 0.71177963*HeartDiseaseorAttack. 
+The logistic regression model would be Diabetes_binary \~ -3.02367993 + 0.06461834*BMI + -1.15403139*HighBP + -0.74280903*HighChol + 0.51060086*Stroke + 0.71177963\*HeartDiseaseorAttack.
